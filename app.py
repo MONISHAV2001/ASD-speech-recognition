@@ -13,7 +13,7 @@ import time
 st.set_page_config(page_title="Autism Detection", layout="centered")
 
 # ==============================
-# ANIMATED UI (CSS)
+# ANIMATED UI
 # ==============================
 st.markdown("""
 <style>
@@ -23,38 +23,30 @@ body {
     animation: gradient 10s ease infinite;
     color: white;
 }
-
 @keyframes gradient {
     0% {background-position: 0% 50%;}
     50% {background-position: 100% 50%;}
     100% {background-position: 0% 50%;}
 }
-
-h1 {
-    text-align: center;
-    animation: fadeIn 2s ease-in-out;
-}
-
 .stButton>button {
     background: linear-gradient(90deg, #ff416c, #ff4b2b);
     color: white;
     border-radius: 12px;
     height: 3em;
     width: 100%;
-    font-size: 18px;
-    transition: 0.3s;
-}
-
-.stButton>button:hover {
-    transform: scale(1.05);
-}
-
-@keyframes fadeIn {
-    from {opacity: 0;}
-    to {opacity: 1;}
 }
 </style>
 """, unsafe_allow_html=True)
+
+# ==============================
+# SIDEBAR
+# ==============================
+st.sidebar.title("ℹ️ About Project")
+st.sidebar.write("""
+Autism Prediction using Speech  
+Model: Random Forest  
+Features: MFCC  
+""")
 
 # ==============================
 # LOAD MODEL
@@ -77,20 +69,20 @@ model = load_model()
 # ==============================
 def extract_features(file_path):
     audio, sr = librosa.load(file_path, sr=16000)
+    audio = librosa.effects.preemphasis(audio)
     mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13)
-    return np.mean(mfcc.T, axis=0), audio, sr
+    return np.mean(mfcc.T, axis=0), audio, sr, mfcc
 
 # ==============================
 # HEADER
 # ==============================
 st.title("🧠 Autism Prediction from Speech")
-st.markdown("### 🎤 Upload or Record Audio")
 
 # ==============================
 # INPUT
 # ==============================
 uploaded_file = st.file_uploader("Upload .wav file", type=["wav"])
-audio_bytes = st.audio_input("Or Record Live Audio")
+audio_bytes = st.audio_input("Or Record Audio")
 
 file_path = None
 
@@ -107,21 +99,28 @@ elif audio_bytes:
     st.audio(file_path)
 
 # ==============================
+# MULTIPLE FILE UPLOAD
+# ==============================
+multi_files = st.file_uploader("Upload multiple files", type=["wav"], accept_multiple_files=True)
+
+# ==============================
 # PREDICTION
 # ==============================
 if file_path and model:
 
     if st.button("🔍 Predict"):
 
-        with st.spinner("Analyzing audio... 🎧"):
+        with st.spinner("Analyzing audio..."):
             time.sleep(2)
 
-        features, audio, sr = extract_features(file_path)
+        features, audio, sr, mfcc = extract_features(file_path)
         features = features.reshape(1, -1)
 
         prediction = model.predict(features)[0]
         prob = model.predict_proba(features)[0]
+        confidence = float(np.max(prob))
 
+        # RESULT
         st.markdown("## 🧾 Result")
 
         if prediction == 1:
@@ -129,58 +128,60 @@ if file_path and model:
         else:
             st.success("✅ Non-Autism")
 
-        st.write("**Numeric (0 = Non-Autism, 1 = Autism):**", int(prediction))
-        st.write("**Confidence Score:**", round(float(np.max(prob)), 3))
+        st.write("Numeric:", int(prediction))
+        st.write("Confidence:", round(confidence, 3))
 
-        # ==============================
         # PIE CHART
-        # ==============================
         st.markdown("## 📊 Prediction Distribution")
-
-        labels = ["Non-Autism", "Autism"]
         fig1, ax1 = plt.subplots()
-        ax1.pie(prob, labels=labels, autopct='%1.2f%%')
-        ax1.set_title("Confidence Distribution")
+        ax1.pie(prob, labels=["Non-Autism", "Autism"], autopct='%1.2f%%')
         st.pyplot(fig1)
 
-        # ==============================
-        # SPECTROGRAM
-        # ==============================
-        st.markdown("## 🎧 Spectrogram")
+        # CONFIDENCE METER
+        st.markdown("## 🎯 Confidence Meter")
+        st.progress(confidence)
 
+        # WAVEFORM
+        st.markdown("## 📈 Waveform")
         fig2, ax2 = plt.subplots()
-        S = librosa.feature.melspectrogram(y=audio, sr=sr)
-        S_DB = librosa.power_to_db(S, ref=np.max)
-
-        img = librosa.display.specshow(S_DB, sr=sr, x_axis='time', y_axis='mel', ax=ax2)
-        fig2.colorbar(img, ax=ax2)
-        ax2.set_title("Mel Spectrogram")
-
+        ax2.plot(audio)
         st.pyplot(fig2)
 
-        # ==============================
-        # REAL-TIME WAVEFORM ANIMATION
-        # ==============================
-        st.markdown("## 🎵 Waveform Animation")
+        # SPECTROGRAM
+        st.markdown("## 🎧 Spectrogram")
+        fig3, ax3 = plt.subplots()
+        S = librosa.feature.melspectrogram(y=audio, sr=sr)
+        S_DB = librosa.power_to_db(S, ref=np.max)
+        img = librosa.display.specshow(S_DB, sr=sr, x_axis='time', y_axis='mel', ax=ax3)
+        fig3.colorbar(img, ax=ax3)
+        st.pyplot(fig3)
 
+        # MFCC
+        st.markdown("## 🧠 MFCC Features")
+        fig4, ax4 = plt.subplots()
+        img2 = librosa.display.specshow(mfcc, x_axis='time', ax=ax4)
+        fig4.colorbar(img2, ax=ax4)
+        st.pyplot(fig4)
+
+        # ANIMATED WAVEFORM
+        st.markdown("## 🎵 Waveform Animation")
         fig_wave, ax_wave = plt.subplots()
         wave_placeholder = st.empty()
 
         audio_norm = audio / np.max(np.abs(audio))
-        chunk_size = int(len(audio_norm) / 50)
+        chunk = int(len(audio_norm) / 50)
 
-        for i in range(0, len(audio_norm), chunk_size):
+        for i in range(0, len(audio_norm), chunk):
             ax_wave.clear()
-
             ax_wave.plot(audio_norm[:i])
             ax_wave.set_ylim(-1, 1)
-            ax_wave.set_title("Audio Waveform (Real-Time Simulation)")
-            ax_wave.set_xlabel("Samples")
-            ax_wave.set_ylabel("Amplitude")
-
             wave_placeholder.pyplot(fig_wave)
             time.sleep(0.05)
 
-        # Cleanup
+        # DOWNLOAD RESULT
+        result_text = f"Prediction: {prediction}\nConfidence: {confidence}"
+        st.download_button("📥 Download Result", result_text, "result.txt")
+
+        # CLEANUP
         if os.path.exists(file_path):
             os.remove(file_path)
