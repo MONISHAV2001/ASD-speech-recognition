@@ -116,15 +116,15 @@ if file_path and model:
         confidence = float(np.max(prob))
 
         # RESULT
-        st.markdown("## 🧾 Result")
+        st.markdown("## 🧾Result")
 
         if prediction == 1:
             st.error("🧠 Autism Detected")
         else:
             st.success("✅ Non-Autism")
 
-        st.write("Numeric:", int(prediction))
-        st.write("Confidence:", round(confidence, 3))
+        st.write("Numeric Score (0-1):", int(prediction))
+        st.write("Confidence Score:", round(confidence, 3))
 
         # PIE CHART
         st.markdown("## 📊 Prediction Distribution")
