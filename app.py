@@ -99,11 +99,6 @@ elif audio_bytes:
     st.audio(file_path)
 
 # ==============================
-# MULTIPLE FILE UPLOAD
-# ==============================
-multi_files = st.file_uploader("Upload multiple files", type=["wav"], accept_multiple_files=True)
-
-# ==============================
 # PREDICTION
 # ==============================
 if file_path and model:
@@ -137,16 +132,6 @@ if file_path and model:
         ax1.pie(prob, labels=["Non-Autism", "Autism"], autopct='%1.2f%%')
         st.pyplot(fig1)
 
-        # CONFIDENCE METER
-        st.markdown("## 🎯 Confidence Meter")
-        st.progress(confidence)
-
-        # WAVEFORM
-        st.markdown("## 📈 Waveform")
-        fig2, ax2 = plt.subplots()
-        ax2.plot(audio)
-        st.pyplot(fig2)
-
         # SPECTROGRAM
         st.markdown("## 🎧 Spectrogram")
         fig3, ax3 = plt.subplots()
@@ -155,13 +140,6 @@ if file_path and model:
         img = librosa.display.specshow(S_DB, sr=sr, x_axis='time', y_axis='mel', ax=ax3)
         fig3.colorbar(img, ax=ax3)
         st.pyplot(fig3)
-
-        # MFCC
-        st.markdown("## 🧠 MFCC Features")
-        fig4, ax4 = plt.subplots()
-        img2 = librosa.display.specshow(mfcc, x_axis='time', ax=ax4)
-        fig4.colorbar(img2, ax=ax4)
-        st.pyplot(fig4)
 
         # ANIMATED WAVEFORM
         st.markdown("## 🎵 Waveform Animation")
@@ -177,10 +155,6 @@ if file_path and model:
             ax_wave.set_ylim(-1, 1)
             wave_placeholder.pyplot(fig_wave)
             time.sleep(0.05)
-
-        # DOWNLOAD RESULT
-        result_text = f"Prediction: {prediction}\nConfidence: {confidence}"
-        st.download_button("📥 Download Result", result_text, "result.txt")
 
         # CLEANUP
         if os.path.exists(file_path):
