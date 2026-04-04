@@ -2,5 +2,6 @@ streamlit
 librosa
 numpy
 scikit-learn
+xgboost
 soundfile
 matplotlib
